@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Take the Long Way</title>
+  <meta name="description" content="Find the weird, overlooked, makes-you-think places along your road trip route." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛣️</text></svg>" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- Welcome-back banner (session restore) -->
+  <div id="welcome-banner" class="welcome-banner hidden">
+    <span class="welcome-text">Welcome back, wanderer — we saved your last trip.</span>
+    <div class="welcome-actions">
+      <button id="welcome-restore" class="btn btn-small btn-primary">Restore</button>
+      <button id="welcome-fresh" class="btn btn-small btn-ghost">Start Fresh</button>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <!-- Search form panel (top-left on desktop, collapsible bar on mobile) -->
+  <section id="search-panel" class="search-panel">
+    <header class="brand">
+      <h1 class="brand-title">Take the Long Way</h1>
+      <p class="brand-tagline">"Take the long way."</p>
+      <button id="panel-collapse" class="panel-collapse" aria-label="Collapse search panel">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </header>
+
+    <div id="panel-body" class="panel-body">
+      <div id="waypoint-list" class="waypoint-list"><!-- waypoint rows injected --></div>
+      <button id="add-stop" class="add-stop" type="button">+ Add a stop</button>
+
+      <div class="field">
+        <input id="keyword" class="text-input" type="text" placeholder='Looking for something? "art", "ghost town", "giant"…' autocomplete="off" />
+      </div>
+
+      <details id="advanced" class="advanced">
+        <summary>Advanced options</summary>
+        <div class="advanced-body">
+          <label class="slider-label">
+            Search corridor: <span id="radius-value" class="mono">25 mi</span>
+            <input id="radius" type="range" min="5" max="75" step="5" value="25" />
+          </label>
+          <fieldset class="source-toggles">
+            <legend>Sources</legend>
+            <label><input type="checkbox" data-source="atlas_obscura" checked /> Atlas Obscura</label>
+            <label><input type="checkbox" data-source="roadside_america" checked /> Roadside America</label>
+            <label><input type="checkbox" data-source="osm" checked /> OpenStreetMap</label>
+            <label><input type="checkbox" data-source="wikipedia" checked /> Wikipedia</label>
+            <label><input type="checkbox" data-source="wikidata" checked /> Wikidata</label>
+            <label><input type="checkbox" data-source="hmdb" checked /> Historical Markers</label>
+          </fieldset>
+        </div>
+      </details>
+
+      <button id="search-btn" class="btn btn-primary btn-block" type="button">Find the Weird Stuff</button>
+      <p id="form-error" class="form-error hidden"></p>
+    </div>
+  </section>
+
+  <!-- Mobile compact pill (shown when a search is active on small screens) -->
+  <button id="mobile-pill" class="mobile-pill hidden" type="button">
+    <span id="mobile-pill-text">Edit route</span>
+  </button>
+
+  <!-- Results panel: right list on desktop, bottom sheet on mobile -->
+  <aside id="results-panel" class="results-panel hidden">
+    <div class="sheet-handle" id="sheet-handle"><span></span></div>
+    <header class="results-header">
+      <h2>Stops worth a detour</h2>
+      <span id="results-count" class="results-count mono"></span>
+    </header>
+    <div class="results-controls">
+      <select id="sort-by" class="sort-select" aria-label="Sort results">
+        <option value="top">Top picks</option>
+        <option value="detour">Shortest detour</option>
+        <option value="score">Highest score</option>
+        <option value="name">A–Z</option>
+      </select>
+      <div id="category-chips" class="category-chips"></div>
+    </div>
+    <div id="results-list" class="results-list"></div>
+    <footer class="results-footer">
+      <button id="finalize-btn" class="btn btn-primary btn-block" disabled>
+        Finalize Trip <span id="selected-count" class="selected-count"></span>
+      </button>
+    </footer>
+  </aside>
+
+  <!-- Loading overlay: compact road + car + loading bar -->
+  <div id="loading-overlay" class="loading-overlay hidden" aria-hidden="true">
+    <div class="loading-scene">
+      <div class="scene-road">
+        <div class="road-line road-line-top"></div>
+        <div class="road-dashes"></div>
+        <div class="road-line road-line-bottom"></div>
+        <div class="scene-car">
+          <svg viewBox="0 0 140 62" width="118" height="52">
+            <!-- side view of a vintage wagon, driving right -->
+            <ellipse cx="70" cy="58" rx="54" ry="3.6" fill="rgba(26,26,46,.3)"/>
+            <rect x="44" y="2" width="34" height="9" rx="3" fill="#8B4A2B"/>
+            <rect x="28" y="9" width="62" height="24" rx="9" fill="#E8923B"/>
+            <rect x="36" y="14" width="20" height="13" rx="3" fill="#9FC6D8"/>
+            <rect x="61" y="14" width="20" height="13" rx="3" fill="#9FC6D8"/>
+            <rect x="8" y="28" width="124" height="21" rx="9" fill="#D4760E"/>
+            <rect x="13" y="34" width="114" height="8" rx="3" fill="#8B4A2B" opacity=".5"/>
+            <circle cx="127" cy="34" r="3.4" fill="#FFD9A0"/>
+            <circle cx="12.5" cy="35" r="2.6" fill="#B23A48"/>
+            <g class="wheel"><circle cx="38" cy="49" r="9.5" fill="#1A1A2E"/><circle cx="38" cy="49" r="3.6" fill="#F5EFE0"/><rect x="37" y="41" width="2" height="16" rx="1" fill="#5C5552"/></g>
+            <g class="wheel"><circle cx="104" cy="49" r="9.5" fill="#1A1A2E"/><circle cx="104" cy="49" r="3.6" fill="#F5EFE0"/><rect x="103" y="41" width="2" height="16" rx="1" fill="#5C5552"/></g>
+          </svg>
+        </div>
+      </div>
+      <p id="loading-text" class="loading-copy">Plotting your route…</p>
+      <div class="loading-bar"><span></span></div>
+    </div>
+  </div>
+
+  <!-- Trip Overview modal -->
+  <div id="trip-modal" class="trip-modal hidden">
+    <div class="trip-modal-backdrop" id="trip-modal-backdrop"></div>
+    <div class="trip-modal-card" id="trip-modal-card">
+      <header class="trip-modal-header">
+        <h2>Your Trip, the Long Way</h2>
+        <p class="trip-modal-sub">Stamped, sealed &amp; ready to wander</p>
+      </header>
+      <div id="trip-minimap" class="trip-minimap"></div>
+      <div id="trip-stats" class="trip-stats"></div>
+      <ol id="trip-stops" class="trip-stops"></ol>
+      <div id="trip-links" class="trip-links"></div>
+      <p class="trip-note">Heads up: actual time depends on how long you linger at each stop — and lingering is the point.</p>
+      <footer class="trip-modal-footer">
+        <button id="edit-trip" class="btn btn-ghost">← Edit Trip</button>
+      </footer>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
