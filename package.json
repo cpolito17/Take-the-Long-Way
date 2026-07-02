@@ -1,0 +1,14 @@
+{
+  "name": "takethelongway",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "check": "tsc -p worker",
+    "deploy": "tsc -p worker && wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260501.0",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.86.0"
+  }
+}

@@ -1,0 +1,34 @@
+name = "takethelongway"
+main = "worker/index.ts"
+compatibility_date = "2026-05-01"
+
+# Serve on the subpath of the existing site, same pattern as Localize/Apex.
+routes = [
+  { pattern = "charliepolito.com/takethelongway", zone_name = "charliepolito.com" },
+  { pattern = "charliepolito.com/takethelongway/*", zone_name = "charliepolito.com" },
+]
+
+# The static frontend (no build step). Asset paths inside it are relative, so
+# it works under /takethelongway/ — the Worker strips the prefix and fetches
+# from this binding.
+[assets]
+directory = "./frontend"
+binding = "ASSETS"
+# The Worker maps /takethelongway/* onto the asset paths itself; disable the
+# built-in HTML redirects so ASSETS.fetch never answers with a redirect that
+# would point the browser at the site root.
+html_handling = "none"
+
+# Cached place data (Atlas Obscura / HMDb / Wikidata), built by
+# `python -m app.pipeline` and imported via `wrangler d1 execute --file`.
+[[d1_databases]]
+binding = "DB"
+database_name = "ttlw-places"
+database_id = "040fe151-ffbe-42d0-b441-4220e3ccdcb5"
+
+[vars]
+# Contact for the User-Agent sent to public endpoints (Wikimedia requires it).
+TTLW_CONTACT = "cpolito@umich.edu"
+
+# Secrets (NOT stored here — set with `wrangler secret put`):
+#   ORS_API_KEY   OpenRouteService directions key (openrouteservice.org, free)

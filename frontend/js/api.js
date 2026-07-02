@@ -12,11 +12,11 @@ async function jfetch(url, opts) {
 }
 
 export function geocode(q) {
-  return jfetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+  return jfetch(`api/geocode?q=${encodeURIComponent(q)}`);
 }
 
 export function search(payload) {
-  return jfetch("/api/search", {
+  return jfetch("api/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -24,7 +24,7 @@ export function search(payload) {
 }
 
 export function finalize(payload) {
-  return jfetch("/api/finalize", {
+  return jfetch("api/finalize", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
