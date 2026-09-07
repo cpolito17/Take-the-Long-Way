@@ -32,7 +32,7 @@ export function detourBadges(place) {
 
 export function categoryBadge(category) {
   const color = CATEGORY_COLORS[category] || CATEGORY_COLORS.Other;
-  return `<span class="badge badge-category" style="background:${color}">${category}</span>`;
+  return `<span class="badge badge-category" style="background:${color}">${escapeHtml(category || "Other")}</span>`;
 }
 
 export function placeholderArt(category) {
@@ -48,4 +48,8 @@ export function placeholderArt(category) {
 
 export function fmtMi(mi) {
   return mi >= 10 ? Math.round(mi) : mi.toFixed(1);
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

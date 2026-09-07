@@ -26,6 +26,16 @@ binding = "DB"
 database_name = "ttlw-places"
 database_id = "040fe151-ffbe-42d0-b441-4220e3ccdcb5"
 
+[[ratelimits]]
+name = "ROUTE_LIMITER"
+namespace_id = "17004"
+simple = { limit = 10, period = 60 }
+
+[[ratelimits]]
+name = "GEOCODE_LIMITER"
+namespace_id = "17005"
+simple = { limit = 30, period = 60 }
+
 [vars]
 # Contact for the User-Agent sent to public endpoints (Wikimedia requires it).
 TTLW_CONTACT = "cpolito@umich.edu"

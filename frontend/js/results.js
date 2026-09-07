@@ -101,7 +101,7 @@ export class ResultsPanel {
         <div class="poi-title-row">
           <h3 class="poi-name">${escapeHtml(p.name)}</h3>
           <input type="checkbox" class="poi-check" ${this.state.selected[p.id] ? "checked" : ""}
-                 aria-label="Add ${escapeHtml(p.name)} to trip" />
+                 aria-label="Add ${escapeAttrText(p.name)} to trip" />
         </div>
         <p class="poi-teaser">${escapeHtml(teaser(p.description))}</p>
         <div class="poi-badges">
@@ -233,15 +233,24 @@ function teaser(text) {
 
 function sourceLabel(p) {
   const all = (p.sources || []).filter((s) => SOURCE_LABELS[s]);
-  if (all.length > 1) return `${SOURCE_LABELS[p.source]} +${all.length - 1}`;
-  return SOURCE_LABELS[p.source] || p.source;
+  if (all.length > 1) return escapeHtml(`${SOURCE_LABELS[p.source]} +${all.length - 1}`);
+  return escapeHtml(SOURCE_LABELS[p.source] || p.source || "Unknown");
 }
 
 function escapeHtml(s) {
   return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 function escapeAttrUrl(s) {
-  return (s || "").replace(/"/g, "%22").replace(/'/g, "%27").replace(/</g, "%3C");
+  try {
+    const url = new URL(s);
+    if (url.protocol !== "https:") return "";
+    return url.href.replace(/"/g, "%22").replace(/'/g, "%27").replace(/</g, "%3C");
+  } catch {
+    return "";
+  }
+}
+function escapeAttrText(s) {
+  return escapeHtml(s).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 function cssEscape(s) {
   return s.replace(/["\\]/g, "\\$&");

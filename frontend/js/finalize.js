@@ -144,7 +144,7 @@ export class FinalizeFlow {
     const el = document.getElementById("trip-links");
     el.innerHTML = data.maps_links
       .map(
-        (l) => `<a class="btn btn-primary" href="${l.url}" target="_blank" rel="noopener">
+        (l) => `<a class="btn btn-primary" href="${escapeAttrUrl(l.url)}" target="_blank" rel="noopener noreferrer">
           ${escapeHtml(l.label)} ↗</a>`
       )
       .join("");
@@ -159,6 +159,16 @@ function fmtDur(min) {
 
 function escapeHtml(s) {
   return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function escapeAttrUrl(value) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:") return "#";
+    return url.href.replace(/"/g, "%22").replace(/'/g, "%27").replace(/</g, "%3C");
+  } catch {
+    return "#";
+  }
 }
 
 function sleep(ms) {

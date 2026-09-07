@@ -222,7 +222,7 @@ export class MapView {
         <p class="pin-popup-name">${escapeHtml(place.name)}</p>
         <p class="pin-popup-desc">${escapeHtml(firstSentence(place.description))}</p>
         <div class="pin-popup-badges">${categoryBadge(place.category)}${detourBadges(place)}</div>
-        <button class="btn btn-small pin-popup-select ${selected ? "" : "btn-primary"}" data-id="${place.id}">
+        <button class="btn btn-small pin-popup-select ${selected ? "" : "btn-primary"}" data-id="${escapeAttr(place.id)}">
           ${selected ? "✓ Added — tap to remove" : "Add to trip"}
         </button>
       </div>`;

@@ -75,7 +75,28 @@ body {
   z-index: 30;
   padding: 18px 18px 16px;
 }
-.brand { position: relative; margin-bottom: 14px; }
+.brand { position: relative; margin-bottom: 14px; padding-right: 92px; }
+.portfolio-link {
+  position: absolute;
+  top: -2px;
+  right: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  color: var(--ink);
+  background: #fffdf8;
+  border: 1.5px solid var(--paper-line);
+  border-radius: 9px;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  transition: border-color 0.15s ease, transform 0.08s ease;
+}
+.portfolio-link:hover { border-color: var(--amber); transform: translateY(-1px); }
+.portfolio-link:focus-visible { outline: 3px solid rgba(212,118,14,.35); outline-offset: 2px; }
+.portfolio-link img { display: block; border-radius: 5px; }
 .brand-title {
   font-family: var(--font-display);
   font-weight: 900;

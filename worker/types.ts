@@ -4,6 +4,8 @@
 export interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
+  ROUTE_LIMITER: RateLimit;
+  GEOCODE_LIMITER: RateLimit;
   TTLW_CONTACT?: string;
   ORS_API_KEY?: string;
   ORS_BASE_URL?: string;

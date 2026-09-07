@@ -1,91 +1,102 @@
-# Take the Long Way (TTLW)
+# Take the Long Way
 
-*"Take the long way."*
+Take the Long Way is a free road trip detour planner for finding unusual places between your starting point and destination. It searches for roadside attractions, folk art, ghost towns, historic markers, ruins, monuments, and other memorable stops near your route, then builds a Google Maps-ready itinerary.
 
-A self-hosted road-trip discovery webapp: enter a start and end point (plus
-optional stops), and TTLW finds the weird, overlooked, makes-you-think
-places along your route — roadside oddities, ghost towns, folk art, strange
-monuments — lets you pick the ones you like, and exports the finished trip
-to Google Maps for navigation.
+**Live app:** [charliepolito.com/takethelongway](https://charliepolito.com/takethelongway/)
 
-Built per [TTLW_spec.md](TTLW_spec.md). FastAPI backend + vanilla-JS
-MapLibre frontend, one container, no database of user data (sessions live
-in the browser).
+**Portfolio:** [charliepolito.com](https://charliepolito.com/)
 
-## Quick start (Ubuntu server, Docker Compose)
+**Source:** [github.com/cpolito17/Take-the-Long-Way](https://github.com/cpolito17/Take-the-Long-Way)
 
-```bash
-cp .env.example .env        # then edit:
-#   ORS_API_KEY   — your OpenRouteService key (openrouteservice.org, free)
-#   TTLW_CONTACT  — your email; goes in the User-Agent (Wikimedia requires it)
+## What it does
 
-docker compose build
-docker compose run --rm app python -m app.pipeline   # one-time data build (~2 min)
-docker compose up -d
-```
+- Plans a driving route with up to eight user waypoints.
+- Searches a configurable corridor around that route.
+- Combines cached Atlas Obscura, HMDb, Wikidata, and optional Roadside America data with live OpenStreetMap and Wikipedia results.
+- Ranks and de-duplicates stops, with filters for category, source, keyword, and detour distance.
+- Compares the direct route with the selected detours.
+- Exports the finished trip as one or more Google Maps directions links.
+- Saves the working trip only in the browser; the app has no accounts or user database.
 
-Open `http://<server>:8080`. The pipeline writes `./data/places.db`
-(~50k US places); re-run it occasionally to refresh. If `./data` already
-contains a `places.db` (one is produced by a dev run of the pipeline), the
-pipeline step can be skipped — the app uses whatever is mounted at `/data`.
+## Architecture
 
-## How it works
+The production app runs on Cloudflare:
 
-- **Routing**: OpenRouteService (multi-stop, up to 8 waypoints).
-  **Geocoding**: Nominatim, proxied through the backend. **Tiles**: CartoDB
-  Positron. The only secret is the ORS key.
-- **Cached sources** (loaded by `python -m app.pipeline` into SQLite):
-  Atlas Obscura, Historical Marker Database, Wikidata, Roadside America
-  (see below). **Live per query**: OpenStreetMap (Overpass), Wikipedia
-  Geosearch.
-- Per search: ORS route → corridor buffer (user-set 5–75 mi) → score →
-  keyword/source filters → cross-source de-dup → spatial de-clustering →
-  ~100 results. Default order is **rank**: score × per-source confidence
-  (sources with real popularity signals like Atlas Obscura's want-to-go
-  counts lead; HMDb's flat curated baseline fills) minus a proximity
-  penalty for sitting far off-route. The results panel adds client-side
-  sorting (top picks / shortest detour / score / A–Z) and category filter
-  chips; historical events ("Event" category — earthquakes, disasters,
-  battles) are separable from currently visitable sites.
-- Finalize computes baseline vs. with-stops stats via ORS and builds Google
-  Maps directions links — one link when it fits, otherwise chained
-  "Leg 1 / Leg 2" links (max 10 points each).
+- `frontend/` contains the static, dependency-free browser interface.
+- `worker/` contains the TypeScript Worker and JSON API.
+- Cloudflare D1 stores the public place index.
+- OpenRouteService provides driving routes.
+- Nominatim, Overpass, and Wikipedia provide live public place data.
+- `backend/` retains the original FastAPI implementation and the Python data-import pipeline.
 
-## Data source notes
+The app deliberately lives under `/takethelongway/`. Frontend URLs are relative, and the Worker maps that prefix to the bundled static assets.
 
-| Source | Status | Swap/refresh |
-|---|---|---|
-| Atlas Obscura | Sapienza ADM-HW3 community TSV (late-2022 scrape, ~4.7k US places incl. want-to-go/been-here counts) | `ATLAS_OBSCURA_TSV_URL` env or replace `data/raw/atlas_obscura_merged.tsv`, re-run pipeline |
-| HMDb | TidyTuesday 2023 bulk CSV (~41k US markers) | `HMDB_CSV_URL` env or replace `data/raw/hmdb_markers.csv` |
-| Wikidata | Live SPARQL at pipeline time via QLever (WDQS rate limits are hostile; override with `WIKIDATA_SPARQL_URL`) | re-run pipeline |
-| Roadside America | **No public dataset exists** (commercial site). Loader is a drop-in slot: place `data/raw/roadside_america.csv` with columns `name,lat,lng,description,url,image` and re-run | — |
-| OSM / Wikipedia | Live per query, no setup | — |
+## Local development
 
-## Verification
-
-With the app running (`uvicorn` natively or the container):
+Requirements: Node.js, npm, and an [OpenRouteService](https://openrouteservice.org/) API key.
 
 ```bash
-python scripts/verify.py http://localhost:8080      # API: route → places → Maps links (31 checks)
-node scripts/ui_test.js http://localhost:8080       # full browser flow (needs puppeteer-core + Edge/Chrome)
+npm install
 ```
 
-## Development (no Docker)
+Create a git-ignored `.dev.vars` file:
+
+```dotenv
+ORS_API_KEY="your-key"
+```
+
+Then start the Worker and open `http://localhost:8787/takethelongway/`:
 
 ```bash
-python -m venv .venv && .venv/Scripts/pip install -r backend/requirements.txt
-cd backend
-ORS_API_KEY=... TTLW_CONTACT=you@example.com python -m app.pipeline
-ORS_API_KEY=... TTLW_CONTACT=you@example.com python -m uvicorn app.main:app --port 8000
+npm run dev
 ```
 
-Frontend is static (no build step), served by FastAPI from `frontend/`.
+The checked-in Wrangler configuration expects a D1 database named `ttlw-places`. See [DEPLOY.md](DEPLOY.md) for data seeding and Cloudflare setup.
 
-## Notes & limits
+## Useful commands
 
-- ORS free tier: ~2,000 directions requests/day — plenty for personal use.
-- A search fires ~25 Wikipedia calls and 1 Overpass query; long routes can
-  take 15–45 s (the loading animation is doing load-bearing work).
-- v2 ideas the architecture leaves room for (self-hosted
-  geocoding/routing, AO scraper, accounts, share links) are listed in the
-  spec §9 and deliberately not built.
+```bash
+npm run check
+npx wrangler deploy --dry-run
+npm run deploy
+```
+
+`npm run deploy` publishes to the configured Cloudflare account, so use the dry run for routine validation.
+
+## Configuration and secrets
+
+Non-secret production configuration lives in `wrangler.toml`. Set the routing credential through Wrangler rather than committing it:
+
+```bash
+npx wrangler secret put ORS_API_KEY
+```
+
+`TTLW_CONTACT` is a public contact value used in User-Agent headers for community APIs. Override service base URLs only with trusted HTTPS endpoints.
+
+## Data refresh
+
+The Python pipeline in `backend/app/pipeline/` builds the public place catalog before it is imported into D1. Source-specific notes and refresh instructions are documented in [DEPLOY.md](DEPLOY.md) and [TTLW_spec.md](TTLW_spec.md).
+
+Roadside America does not publish an official bulk dataset. Its loader is optional and expects a locally supplied CSV; no Roadside America data is scraped at request time.
+
+## Security and privacy
+
+- The OpenRouteService key remains a Worker secret and is never sent to the browser.
+- API requests enforce JSON content type, payload size, coordinate bounds, waypoint limits, and stop limits.
+- The Worker applies clickjacking, MIME-sniffing, referrer, and browser-permission response protections.
+- Third-party place text is escaped before rendering, and generated outbound links are restricted to HTTPS.
+- Trip state is stored in the visitor's local storage. Clearing site data removes it.
+- Native Cloudflare rate limits protect geocoding separately from the more expensive routing and trip-generation endpoints.
+
+If you discover a security issue, please report it privately through [charliepolito.com](https://charliepolito.com/) rather than opening a public issue with exploit details.
+
+## Project documentation
+
+- [DEPLOY.md](DEPLOY.md) — Cloudflare deployment and D1 setup
+- [PROJECT.md](PROJECT.md) — implementation notes and system design
+- [TTLW_spec.md](TTLW_spec.md) — original product specification
+- [GAPS.md](GAPS.md) — known limitations and future improvements
+
+## License
+
+No open-source license is currently included. Copyright remains with the repository owner unless a license is added.
